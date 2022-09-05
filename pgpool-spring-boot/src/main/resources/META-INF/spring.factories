@@ -1,0 +1,2 @@
+org.springframework.boot.autoconfigure.EnableAutoConfiguration=\
+nl.wouterh.pgpool.spring.PgPoolAutoConfiguration

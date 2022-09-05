@@ -22,7 +22,6 @@ import org.springframework.test.context.TestExecutionListeners.MergeMode;
 @Inherited
 @TestExecutionListeners(listeners = {PgPoolTestExecutionListener.class},
     mergeMode = MergeMode.MERGE_WITH_DEFAULTS)
-@Import(PgPoolAutoConfiguration.class)
 public @interface PgPoolTest {
 
 }
