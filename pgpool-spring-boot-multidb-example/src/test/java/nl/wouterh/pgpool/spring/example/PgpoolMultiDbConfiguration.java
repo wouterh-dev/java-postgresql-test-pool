@@ -7,7 +7,7 @@ import java.util.concurrent.Future;
 import nl.wouterh.pgpool.PgPoolConfig;
 import nl.wouterh.pgpool.PgPoolManager;
 import nl.wouterh.pgpool.PooledDatabase;
-import nl.wouterh.pgpool.common.example.CommonTestContainer;
+import nl.wouterh.pgpool.common.example.CommonTestContainers;
 import nl.wouterh.pgpool.common.example.ExampleTableFiller;
 import nl.wouterh.pgpool.liquibase.LiquibaseDatabaseInitializer;
 import nl.wouterh.pgpool.spring.PgPoolDataSource;
@@ -34,8 +34,8 @@ public class PgpoolMultiDbConfiguration {
   ) throws SQLException {
     // Optionally start container concurrently, not blocking spring context initialization
     Future<JdbcDatabaseContainer> startedPostgreSQLContainer = executorService.submit(() -> {
-      CommonTestContainer.postgres.start();
-      return CommonTestContainer.postgres;
+      CommonTestContainers.postgres.start();
+      return CommonTestContainers.postgres;
     });
 
     PgPoolManager manager = new PgPoolManager(PgPoolConfig.builder()
@@ -45,7 +45,7 @@ public class PgpoolMultiDbConfiguration {
         .pooledDatabase(PooledDatabase.builder()
             .name("db1")
             .createThreads(2)
-            .spares(10)
+            .spares(5)
             .listener(new HikariDataSourceFactory())
             .initializer(new LiquibaseDatabaseInitializer("db/changelog/changelog-1.xml"))
             .initializer(new ExampleTableFiller())
@@ -53,7 +53,7 @@ public class PgpoolMultiDbConfiguration {
         .pooledDatabase(PooledDatabase.builder()
             .name("db2")
             .createThreads(2)
-            .spares(10)
+            .spares(5)
             .listener(new HikariDataSourceFactory())
             .initializer(new LiquibaseDatabaseInitializer("db/changelog/changelog-2.xml"))
             .build())

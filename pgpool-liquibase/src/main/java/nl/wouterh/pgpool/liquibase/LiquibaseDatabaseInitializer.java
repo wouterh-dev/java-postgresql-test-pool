@@ -23,6 +23,9 @@ import nl.wouterh.pgpool.DatabaseInitializer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+/**
+ * A {@link DatabaseInitializer} which integrates {@link Liquibase}
+ */
 public class LiquibaseDatabaseInitializer implements DatabaseInitializer {
 
   /**

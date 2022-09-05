@@ -6,6 +6,10 @@ import java.sql.SQLException;
 import java.util.logging.Logger;
 import javax.sql.DataSource;
 
+/**
+ * A {@link DataSource} that creates connections for a {@link PreparedDatabase} without any caching
+ * or pooling.
+ */
 public class PreparedDatabaseDataSource implements DataSource {
 
   private final PreparedDatabase preparedDatabase;

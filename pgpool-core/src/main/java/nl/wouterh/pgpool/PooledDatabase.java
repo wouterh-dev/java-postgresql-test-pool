@@ -5,6 +5,8 @@ import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.List;
+import java.util.concurrent.ArrayBlockingQueue;
+import java.util.concurrent.SynchronousQueue;
 import lombok.Builder;
 import lombok.Data;
 import lombok.Getter;
@@ -51,15 +53,18 @@ public class PooledDatabase {
    * always be a ({@link #createThreads} + {@link #spares}) amount of prepared databases.
    */
   @Builder.Default
-  private int createThreads = 1;
+  private int createThreads = 2;
 
   /**
    * Size of the {@link PreparedDatabase} queue. Useful when there is a large variance in test
    * duration, where some tests take longer to run than others, so during execution of a slower test
-   * the queue can be refilled to accommodate for a later burst.
+   * the queue can be filled to accommodate for a later burst.
+   * <p>
+   * A size of 0 means a {@link SynchronousQueue} will be used, otherwise an
+   * {@link ArrayBlockingQueue} of the specified size will be used
    */
   @Builder.Default
-  private int spares = 2;
+  private int spares = 5;
 
   @Getter(lazy = true)
   private final String checksum = calculateChecksum();

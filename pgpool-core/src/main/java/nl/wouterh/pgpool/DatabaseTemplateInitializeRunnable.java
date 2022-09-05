@@ -10,7 +10,6 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ThreadLocalRandom;
 import lombok.RequiredArgsConstructor;
@@ -18,7 +17,7 @@ import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
 @RequiredArgsConstructor
-public class DatabaseTemplateInitializeRunnable {
+class DatabaseTemplateInitializeRunnable {
 
   private final byte[] buf = new byte[20];
 
@@ -64,19 +63,9 @@ public class DatabaseTemplateInitializeRunnable {
       List<DatabaseInitializer> initializers = pooledDatabase.getInitializers();
       if (initializers != null) {
         try (Connection workConnection = connectionProvider.getConnection(workName)) {
-//
-//          for (DatabaseInitializer initializer : initializers) {
-//            initializer.beforeRun(workConnection);
-//          }
-//
           for (DatabaseInitializer initializer : initializers) {
             initializer.run(workConnection);
           }
-//
-//          for (int i = initializers.size() - 1; i >= 0; i--) {
-//            DatabaseInitializer initializer = initializers.get(i);
-//            initializer.afterRun(workConnection);
-//          }
         }
       }
 

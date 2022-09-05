@@ -4,7 +4,7 @@ import java.sql.Connection;
 import java.sql.SQLException;
 import org.springframework.jdbc.datasource.AbstractDataSource;
 
-public class ClosedDataSource extends AbstractDataSource {
+class ClosedDataSource extends AbstractDataSource {
 
   @Override
   public Connection getConnection() throws SQLException {

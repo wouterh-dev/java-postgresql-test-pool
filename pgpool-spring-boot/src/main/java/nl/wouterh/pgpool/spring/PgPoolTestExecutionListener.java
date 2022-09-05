@@ -8,9 +8,15 @@ import javax.sql.DataSource;
 import nl.wouterh.pgpool.PgPoolManager;
 import nl.wouterh.pgpool.PreparedDatabase;
 import org.springframework.test.context.TestContext;
+import org.springframework.test.context.TestExecutionListener;
 import org.springframework.test.context.support.AbstractTestExecutionListener;
 
+/**
+ * A Spring {@link TestExecutionListener} which integrates the {@link PgPoolManager} and associates
+ * the {@link PreparedDatabase}s with the {@link PgPoolDataSource}s
+ */
 public class PgPoolTestExecutionListener extends AbstractTestExecutionListener {
+
   @Override
   public void beforeTestMethod(TestContext testContext) throws Exception {
     PgPoolManager manager = manager(testContext);
@@ -45,6 +51,10 @@ public class PgPoolTestExecutionListener extends AbstractTestExecutionListener {
         .getBean(PgPoolManager.class);
   }
 
+  /**
+   * Returns all {@link PgPoolDataSource}s, which may be wrapped by another {@link DataSource} in
+   * which case they will be unwrapped.
+   */
   private Stream<PgPoolDataSource> dataSources(TestContext testContext) throws SQLException {
     try {
       return testContext.getApplicationContext()

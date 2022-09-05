@@ -11,6 +11,8 @@ import org.springframework.jdbc.datasource.SingleConnectionDataSource;
  * Calls {@link PgPoolDataSource#setThreadLocalOverride} before/after the
  * {@link DatabaseInitializer#run(Connection)} to let the database initialization thread access the
  * template database via Spring wired datasource consumers
+ *
+ * @see PgPoolDataSource
  */
 public class PgPoolDataSourceInitializerOverride implements DatabaseInitializer {
 

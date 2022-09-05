@@ -7,7 +7,7 @@ import java.util.concurrent.Future;
 import javax.sql.DataSource;
 import nl.wouterh.pgpool.PgPoolConfig;
 import nl.wouterh.pgpool.PooledDatabase;
-import nl.wouterh.pgpool.common.example.CommonTestContainer;
+import nl.wouterh.pgpool.common.example.CommonTestContainers;
 import nl.wouterh.pgpool.liquibase.LiquibaseDatabaseInitializer;
 import nl.wouterh.pgpool.spring.PgPoolDataSource;
 import nl.wouterh.pgpool.spring.PgPoolDataSourceInitializerOverride;
@@ -33,8 +33,8 @@ public class PgPoolConfiguration {
   ) throws SQLException {
     // Optionally start container concurrently, without blocking the spring context initialization
     Future<JdbcDatabaseContainer> postgresContainer = executorService.submit(() -> {
-      CommonTestContainer.postgres.start();
-      return CommonTestContainer.postgres;
+      CommonTestContainers.postgres.start();
+      return CommonTestContainers.postgres;
     });
 
     return PgPoolConfig.builder()
@@ -45,7 +45,7 @@ public class PgPoolConfiguration {
         .pooledDatabase(PooledDatabase.builder()
             .name("db1")
             .createThreads(2)
-            .spares(10)
+            .spares(5)
             .listener(new HikariDataSourceFactory())
             .initializer(new LiquibaseDatabaseInitializer("db/changelog/changelog.xml"))
             .initializer(new PgPoolDataSourceInitializerOverride(dataSource, tableFiller))

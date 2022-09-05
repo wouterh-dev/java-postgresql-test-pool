@@ -14,27 +14,29 @@ import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.SynchronousQueue;
 import java.util.function.Function;
 import java.util.stream.Collectors;
-import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 
+/**
+ * Manages the creation of template & prepared database for tests
+ */
 @Slf4j
 public class PgPoolManager {
 
+  private final Object startLock = new Object();
   private final Object lock = new Object();
 
   private final boolean waitForDropOnShutdown;
   private final int dropThreads;
   private final ConnectionProvider connectionProvider;
   private final Duration takeDurationThreshold;
-  private final CountDownLatch startedLatch = new CountDownLatch(1);
   private final Map<String, PooledDatabase> pooledDatabases;
   private final Map<String, PreparedDatabase> preparedDatabases = new ConcurrentHashMap<>();
   private final Map<String, BlockingQueue<PreparedDatabase>> createQueues = new ConcurrentHashMap<>();
@@ -44,7 +46,7 @@ public class PgPoolManager {
   private final List<ThreadWithRunnable> createRunnables = new ArrayList<>();
   private final List<ThreadWithRunnable> dropRunnables = new ArrayList<>();
   private boolean stopped;
-  private boolean starting;
+  private boolean started;
   private final boolean shutdownExecutor;
   private final ExecutorService executor;
 
@@ -67,6 +69,9 @@ public class PgPoolManager {
     Runtime.getRuntime().addShutdownHook(new Thread(this::stop));
   }
 
+  /**
+   * Schedule {@link #start()} to be called via the configured {@link PgPoolConfig#getExecutor()}
+   */
   public void scheduleStart() {
     executor.submit(log(() -> {
       start();
@@ -74,75 +79,83 @@ public class PgPoolManager {
     }));
   }
 
+  /**
+   * Creates the {@link PgPoolConfig#getPooledDatabases()} and runs their
+   * {@link PooledDatabase#getInitializers()}
+   *
+   * @return false if already starting on another thread
+   */
   public void start() throws InterruptedException, SQLException {
-    synchronized (lock) {
-      if (stopped) {
-        throw new IllegalStateException("Can not restart");
-      }
-
-      if (starting) {
-        return;
-      }
-
-      starting = true;
-    }
-
-    Instant startTime = Instant.now();
-    log.debug("Starting dropper thread");
-    for (int i = 0; i < dropThreads; i++) {
-      startDropThread("pgpool-dropper-" + i,
-          new DatabaseDropperRunnable(
-              dropQueue,
-              createdDatabases,
-              connectionProvider
-          ));
-    }
-
-    List<Future<Object>> futures = pooledDatabases.values().stream()
-        .map(pooledDatabase -> executor.submit(log(() -> {
-          new DatabaseTemplateInitializeRunnable(connectionProvider, pooledDatabase).run();
-
-          BlockingQueue<PreparedDatabase> createQueue = new ArrayBlockingQueue<>(
-              pooledDatabase.getSpares());
-          createQueues.put(pooledDatabase.getName(), createQueue);
-          for (int i = 0; i < pooledDatabase.getCreateThreads(); i++) {
-            startCreateThread("pgpool-creator-" + pooledDatabase.getName() + "-" + i,
-                new DatabaseCreatorRunnable(
-                    createQueue,
-                    createdDatabases,
-                    pooledDatabase,
-                    connectionProvider
-                ));
-          }
-
-          return null;
-        }))).collect(Collectors.toList());
-
-    for (Future<Object> future : futures) {
-      try {
-        future.get();
-      } catch (ExecutionException e) {
-        log.warn("Error initializing pooled database", e);
-        stopped = true;
-        startedLatch.countDown();
-
-        if (e.getCause() instanceof SQLException) {
-          throw (SQLException) e.getCause();
+    synchronized (startLock) {
+      synchronized (lock) {
+        if (stopped) {
+          throw new IllegalStateException("Can not restart");
         }
-        throw new RuntimeException(e);
-      }
-    }
 
-    log.info("Took {} to start", Duration.between(startTime, Instant.now()));
-    startedLatch.countDown();
+        if (started) {
+          return;
+        }
+      }
+
+      Instant startTime = Instant.now();
+      log.debug("Starting dropper thread");
+      for (int i = 0; i < dropThreads; i++) {
+        startDropThread("pgpool-dropper-" + i,
+            new DatabaseDropperRunnable(
+                dropQueue,
+                createdDatabases,
+                connectionProvider
+            ));
+      }
+
+      List<Future<Object>> futures = pooledDatabases.values().stream()
+          .map(pooledDatabase -> executor.submit(log(() -> {
+            new DatabaseTemplateInitializeRunnable(connectionProvider, pooledDatabase).run();
+
+            BlockingQueue<PreparedDatabase> createQueue;
+            if (pooledDatabase.getSpares() <= 0) {
+              createQueue = new SynchronousQueue<>();
+            } else {
+              createQueue = new ArrayBlockingQueue<>(pooledDatabase.getSpares());
+            }
+
+            createQueues.put(pooledDatabase.getName(), createQueue);
+            for (int i = 0; i < pooledDatabase.getCreateThreads(); i++) {
+              startCreateThread("pgpool-creator-" + pooledDatabase.getName() + "-" + i,
+                  new DatabaseCreatorRunnable(
+                      createQueue,
+                      createdDatabases,
+                      pooledDatabase,
+                      connectionProvider
+                  ));
+            }
+
+            return null;
+          }))).collect(Collectors.toList());
+
+      for (Future<Object> future : futures) {
+        try {
+          future.get();
+        } catch (ExecutionException e) {
+          log.warn("Error initializing pooled database", e);
+          stopped = true;
+
+          if (e.getCause() instanceof SQLException) {
+            throw (SQLException) e.getCause();
+          }
+          throw new RuntimeException(e);
+        }
+      }
+
+      started = true;
+      log.info("Took {} to start", Duration.between(startTime, Instant.now()));
+    }
   }
 
   public void beforeEach() throws Exception {
-    if (!starting) {
+    if (!started) {
       start();
     }
-
-    startedLatch.await();
 
     if (stopped) {
       throw new IllegalStateException("stopped");

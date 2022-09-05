@@ -11,7 +11,10 @@ import org.springframework.test.context.TestExecutionListeners;
 import org.springframework.test.context.TestExecutionListeners.MergeMode;
 
 /**
- * Enables Spring Boot PgPool for a test
+ * Enables PgPool for a Spring Boot test
+ *
+ * @see PgPoolTestExecutionListener
+ * @see PgPoolAutoConfiguration
  */
 @Target(ElementType.TYPE)
 @Retention(RetentionPolicy.RUNTIME)

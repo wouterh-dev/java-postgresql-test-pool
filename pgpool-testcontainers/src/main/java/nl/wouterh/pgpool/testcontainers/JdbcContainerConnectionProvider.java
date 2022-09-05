@@ -9,16 +9,21 @@ import java.util.concurrent.Future;
 import nl.wouterh.pgpool.ConnectionProvider;
 import org.testcontainers.containers.JdbcDatabaseContainer;
 
-public class JcbcContainerConnectionProvider implements ConnectionProvider {
+/**
+ * Implements the {@link ConnectionProvider} for a {@link JdbcDatabaseContainer}. The
+ * {@link JdbcDatabaseContainer} may be supplied via a {@link Future} which will be awaited when
+ * {@link #getConnection(String)} is called, allowing for asynchronous startup.
+ */
+public class JdbcContainerConnectionProvider implements ConnectionProvider {
 
   private final Future<JdbcDatabaseContainer> container;
   private final int originalPort;
 
-  public JcbcContainerConnectionProvider(JdbcDatabaseContainer container, int originalPort) {
+  public JdbcContainerConnectionProvider(JdbcDatabaseContainer container, int originalPort) {
     this(CompletableFuture.completedFuture(container), originalPort);
   }
 
-  public JcbcContainerConnectionProvider(Future<JdbcDatabaseContainer> container,
+  public JdbcContainerConnectionProvider(Future<JdbcDatabaseContainer> container,
       int originalPort) {
     this.container = container;
     this.originalPort = originalPort;
@@ -35,27 +40,27 @@ public class JcbcContainerConnectionProvider implements ConnectionProvider {
     }
   }
 
-  public String getUsername() {
+  protected String getUsername() {
     return container().getUsername();
   }
 
-  public String getPassword() {
+  protected String getPassword() {
     return container().getPassword();
   }
 
-  public String getHost() {
+  protected String getHost() {
     return container().getHost();
   }
 
-  public int getPort() {
+  protected int getPort() {
     return container().getMappedPort(originalPort);
   }
 
-  public String getDriverScheme() {
+  protected String getDriverScheme() {
     return "postgresql";
   }
 
-  public String getJdbcUrl(String database) {
+  protected String getJdbcUrl(String database) {
     return String.format(
         "jdbc:%s://%s:%d/%s",
         getDriverScheme(),

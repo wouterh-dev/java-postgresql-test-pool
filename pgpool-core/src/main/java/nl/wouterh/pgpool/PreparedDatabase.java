@@ -7,7 +7,8 @@ import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 
 /**
- * A prepared database which has been created using a template database
+ * A prepared database which has been created using a template database. Will be used during test
+ * execution.
  */
 @RequiredArgsConstructor
 public class PreparedDatabase {

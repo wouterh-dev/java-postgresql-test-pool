@@ -6,10 +6,15 @@ import java.sql.PreparedStatement;
 import java.sql.SQLException;
 import nl.wouterh.pgpool.DatabaseInitializer;
 
+/**
+ * A simple {@link DatabaseInitializer} example which fills a table
+ */
 public class ExampleTableFiller implements DatabaseInitializer {
 
   @Override
   public byte[] calculateChecksum() {
+    // Checksum is hardcoded & must be manually changed whenever the implementation of run changes
+    // if the run method loaded files, then those files could be checksummed instead
     return (ExampleTableFiller.class.getName() + "v3").getBytes(StandardCharsets.UTF_8);
   }
 

@@ -49,7 +49,7 @@ PgPoolConfig config = PgPoolConfig.builder()
   .pooledDatabase(PooledDatabase.builder()
       .name("db1")
       .createThreads(2)
-      .spares(10)
+      .spares(5)
       .initializer(new LiquibaseDatabaseInitializer("db/changelog/changelog.xml"))
       .build())
   .build();

@@ -6,6 +6,11 @@ import nl.wouterh.pgpool.PgPoolManager;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
+/**
+ * Configures a {@link PgPoolManager}, expects a {@link PgPoolConfig} bean to be available
+ *
+ * @see PgPoolTest
+ */
 @Configuration(proxyBeanMethods = false)
 @Slf4j
 public class PgPoolAutoConfiguration {

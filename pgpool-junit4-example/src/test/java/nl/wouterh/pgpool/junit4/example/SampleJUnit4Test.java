@@ -6,7 +6,7 @@ import java.sql.Statement;
 import lombok.extern.slf4j.Slf4j;
 import nl.wouterh.pgpool.PooledDatabase;
 import nl.wouterh.pgpool.PgPoolConfig;
-import nl.wouterh.pgpool.common.example.CommonTestContainer;
+import nl.wouterh.pgpool.common.example.CommonTestContainers;
 import nl.wouterh.pgpool.common.example.ExampleTableCreator;
 import nl.wouterh.pgpool.common.example.ExampleTableFiller;
 import nl.wouterh.pgpool.junit4.PgPoolRule;
@@ -19,19 +19,19 @@ import org.testcontainers.utility.TestcontainersConfiguration;
 public class SampleJUnit4Test {
 
   static {
-    CommonTestContainer.postgres.start();
+    CommonTestContainers.postgres.start();
   }
 
   @ClassRule
-  public static PgPoolRule pgPoolExtension = new PgPoolRule(
+  public static final PgPoolRule pgPoolRule = new PgPoolRule(
       PgPoolConfig.builder()
-          .connectionProvider(new PostgreSQLContainerConnectionProvider(CommonTestContainer.postgres))
+          .connectionProvider(new PostgreSQLContainerConnectionProvider(CommonTestContainers.postgres))
           .waitForDropOnShutdown(
               TestcontainersConfiguration.getInstance().environmentSupportsReuse())
           .pooledDatabase(PooledDatabase.builder()
               .name("db1")
               .createThreads(2)
-              .spares(10)
+              .spares(5)
               .initializer(new ExampleTableCreator())
               .initializer(new ExampleTableFiller())
               .build())
@@ -41,7 +41,7 @@ public class SampleJUnit4Test {
           .build());
 
   private void test() throws Exception {
-    try (Connection connection = pgPoolExtension.createConnection("db1")) {
+    try (Connection connection = pgPoolRule.createConnection("db1")) {
       try (Statement statement = connection.createStatement();
           ResultSet rs = statement.executeQuery("SELECT current_database()")) {
         rs.next();

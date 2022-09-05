@@ -6,8 +6,8 @@ import java.sql.SQLException;
 
 /**
  * Initializes a template database by e.g. applying migrations and filling data. Implementations
- * should be deterministic, meaning that as long as the result of {@link #calculateChecksum} is the
- * same then the effect on the {@link Connection} should also be the same.
+ * should be deterministic, meaning that if the result of {@link #calculateChecksum} is the same
+ * then the effect on the {@link Connection} should also be the same.
  */
 public interface DatabaseInitializer {
 

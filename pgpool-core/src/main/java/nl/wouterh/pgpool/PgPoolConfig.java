@@ -8,6 +8,9 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.Singular;
 
+/**
+ * Configuration of {@link PgPoolManager}
+ */
 @Data
 @Builder
 public class PgPoolConfig {
