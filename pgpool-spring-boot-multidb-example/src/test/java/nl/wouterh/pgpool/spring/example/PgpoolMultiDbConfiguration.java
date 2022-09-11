@@ -5,7 +5,6 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import nl.wouterh.pgpool.PgPoolConfig;
-import nl.wouterh.pgpool.PgPoolManager;
 import nl.wouterh.pgpool.PooledDatabase;
 import nl.wouterh.pgpool.common.example.CommonTestContainers;
 import nl.wouterh.pgpool.common.example.ExampleTableFiller;
@@ -27,9 +26,7 @@ public class PgpoolMultiDbConfiguration {
   }
 
   @Bean
-  PgPoolManager pgPoolManager(
-      @Qualifier("db1") PgPoolDataSource dataSource1,
-      @Qualifier("db2") PgPoolDataSource dataSource2,
+  PgPoolConfig pgPoolConfig(
       ExecutorService executorService
   ) throws SQLException {
     // Optionally start container concurrently, not blocking spring context initialization
@@ -38,7 +35,7 @@ public class PgpoolMultiDbConfiguration {
       return CommonTestContainers.postgres;
     });
 
-    PgPoolManager manager = new PgPoolManager(PgPoolConfig.builder()
+    return PgPoolConfig.builder()
         .connectionProvider(new PostgreSQLContainerConnectionProvider(startedPostgreSQLContainer))
         .waitForDropOnShutdown(true)
         .dropThreads(2)
@@ -57,15 +54,7 @@ public class PgpoolMultiDbConfiguration {
             .listener(new HikariDataSourceFactory())
             .initializer(new LiquibaseDatabaseInitializer("db/changelog/changelog-2.xml"))
             .build())
-        .build());
-
-    // Optionally start manager concurrently, not blocking spring context initialization
-    executorService.submit(() -> {
-      manager.start();
-      return manager;
-    });
-
-    return manager;
+        .build();
   }
 
   @Bean

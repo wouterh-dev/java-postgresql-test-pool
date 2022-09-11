@@ -1,6 +1,6 @@
 package nl.wouterh.pgpool;
 
-public class Hex {
+class Hex {
 
   private static final char[] HEX_ARRAY = "0123456789abcdef".toCharArray();
 

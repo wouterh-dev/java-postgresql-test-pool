@@ -43,12 +43,13 @@ public class PgPoolManager {
   private final Set<PreparedDatabase> createdDatabases = Collections.newSetFromMap(
       new ConcurrentHashMap<>());
   private final BlockingQueue<PreparedDatabase> dropQueue = new LinkedBlockingQueue<>();
-  private final List<ThreadWithRunnable> createRunnables = new ArrayList<>();
-  private final List<ThreadWithRunnable> dropRunnables = new ArrayList<>();
+  private final List<Task> createTasks = new ArrayList<>();
+  private final List<Task> dropTasks = new ArrayList<>();
   private boolean stopped;
   private boolean started;
   private final boolean shutdownExecutor;
   private final ExecutorService executor;
+  private final DatabaseOperations databaseOperations;
 
   public PgPoolManager(PgPoolConfig config) {
     this.dropThreads = config.getDropThreads();
@@ -57,6 +58,7 @@ public class PgPoolManager {
     this.pooledDatabases = config.getPooledDatabases().stream()
         .collect(Collectors.toMap(PooledDatabase::getName, Function.identity()));
     this.takeDurationThreshold = config.getTakeDurationThreshold();
+    this.databaseOperations = config.getDatabaseOperations();
 
     if (config.getExecutor() != null) {
       executor = config.getExecutor();
@@ -102,6 +104,7 @@ public class PgPoolManager {
       for (int i = 0; i < dropThreads; i++) {
         startDropThread("pgpool-dropper-" + i,
             new DatabaseDropperRunnable(
+                databaseOperations,
                 dropQueue,
                 createdDatabases,
                 connectionProvider
@@ -110,7 +113,8 @@ public class PgPoolManager {
 
       List<Future<Object>> futures = pooledDatabases.values().stream()
           .map(pooledDatabase -> executor.submit(log(() -> {
-            new DatabaseTemplateInitializeRunnable(connectionProvider, pooledDatabase).run();
+            new DatabaseTemplateInitializeRunnable(databaseOperations, connectionProvider,
+                pooledDatabase).run();
 
             BlockingQueue<PreparedDatabase> createQueue;
             if (pooledDatabase.getSpares() <= 0) {
@@ -123,6 +127,7 @@ public class PgPoolManager {
             for (int i = 0; i < pooledDatabase.getCreateThreads(); i++) {
               startCreateThread("pgpool-creator-" + pooledDatabase.getName() + "-" + i,
                   new DatabaseCreatorRunnable(
+                      databaseOperations,
                       createQueue,
                       createdDatabases,
                       pooledDatabase,
@@ -201,14 +206,14 @@ public class PgPoolManager {
     Thread thread = new Thread(runnable, name);
     thread.start();
 
-    createRunnables.add(new ThreadWithRunnable(thread, runnable));
+    createTasks.add(new Task(thread, runnable));
   }
 
   private void startDropThread(String name, DatabaseDropperRunnable runnable) {
     Thread thread = new Thread(runnable, name);
     thread.start();
 
-    dropRunnables.add(new ThreadWithRunnable(thread, runnable));
+    dropTasks.add(new Task(thread, runnable));
   }
 
   public PreparedDatabase getPreparedDatabase(String templateName) {
@@ -229,13 +234,13 @@ public class PgPoolManager {
     }
 
     // stop creating new databases
-    for (ThreadWithRunnable createRunnable : createRunnables) {
+    for (Task createRunnable : createTasks) {
       createRunnable.stop();
       createRunnable.interrupt();
     }
 
     try {
-      for (ThreadWithRunnable createRunnable : createRunnables) {
+      for (Task createRunnable : createTasks) {
         createRunnable.join();
       }
     } catch (InterruptedException e) {
@@ -252,21 +257,21 @@ public class PgPoolManager {
     }
 
     // stop drop threads
-    for (ThreadWithRunnable dropRunnable : dropRunnables) {
+    for (Task dropRunnable : dropTasks) {
       dropRunnable.stop();
       dropRunnable.interrupt();
     }
 
     try {
-      for (ThreadWithRunnable dropRunnable : dropRunnables) {
+      for (Task dropRunnable : dropTasks) {
         dropRunnable.join();
       }
     } catch (InterruptedException e) {
       Thread.currentThread().interrupt();
     }
 
-    createRunnables.clear();
-    dropRunnables.clear();
+    createTasks.clear();
+    dropTasks.clear();
   }
 
   private void dropCreatedDatabases() throws Exception {
@@ -276,6 +281,7 @@ public class PgPoolManager {
     }
 
     DatabaseDropperRunnable dropper = new DatabaseDropperRunnable(
+        databaseOperations,
         dropQueue,
         createdDatabases,
         connectionProvider
@@ -302,7 +308,7 @@ public class PgPoolManager {
       try {
         return callable.call();
       } catch (Exception e) {
-        log.error("Error during callable", e);
+        log.error("Error during scheduler execution", e);
         throw e;
       }
     };

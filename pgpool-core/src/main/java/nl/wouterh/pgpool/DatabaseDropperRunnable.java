@@ -1,7 +1,6 @@
 package nl.wouterh.pgpool;
 
 import java.sql.Connection;
-import java.sql.PreparedStatement;
 import java.sql.SQLException;
 import java.util.List;
 import java.util.Set;
@@ -11,15 +10,18 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 class DatabaseDropperRunnable extends ConnectionRunnable {
 
+  private final DatabaseOperations databaseOperations;
   private final BlockingQueue<PreparedDatabase> queue;
   private final Set<PreparedDatabase> createdDatabases;
 
   public DatabaseDropperRunnable(
+      DatabaseOperations databaseOperations,
       BlockingQueue<PreparedDatabase> queue,
       Set<PreparedDatabase> createdDatabases,
       ConnectionProvider connectionProvider
   ) {
     super(connectionProvider);
+    this.databaseOperations = databaseOperations;
     this.queue = queue;
     this.createdDatabases = createdDatabases;
   }
@@ -41,7 +43,7 @@ class DatabaseDropperRunnable extends ConnectionRunnable {
         }
       }
 
-      drop(connection, next);
+      databaseOperations.dropDatabase(connection, next.getName());
     } catch (SQLException e) {
       if (!e.getSQLState().equals("3D000")) {
         // suppress database does not exist errors
@@ -49,20 +51,6 @@ class DatabaseDropperRunnable extends ConnectionRunnable {
       }
     } finally {
       createdDatabases.remove(next);
-    }
-  }
-
-  protected void drop(Connection connection, PreparedDatabase next) throws SQLException {
-    try (PreparedStatement statement = connection.prepareStatement(
-        "SELECT pg_terminate_backend(pg_stat_activity.pid) FROM pg_stat_activity WHERE pg_stat_activity.datname = ?; "
-            + "DROP DATABASE \"" + next.getName() + "\"")) {
-      statement.setString(1, next.getName());
-      statement.execute();
-    } catch (SQLException e) {
-      if (!e.getSQLState().equals("3D000")) {
-        // suppress database does not exist errors
-        throw e;
-      }
     }
   }
 }

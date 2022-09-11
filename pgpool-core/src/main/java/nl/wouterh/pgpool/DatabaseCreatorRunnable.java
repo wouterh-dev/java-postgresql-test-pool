@@ -6,12 +6,9 @@ import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.sql.Connection;
-import java.sql.SQLException;
-import java.sql.Statement;
 import java.util.Set;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ThreadLocalRandom;
-import javax.sql.DataSource;
 import lombok.extern.slf4j.Slf4j;
 
 /**
@@ -25,15 +22,18 @@ class DatabaseCreatorRunnable extends ConnectionRunnable {
 
   private final Set<PreparedDatabase> createdDatabases;
   private final PooledDatabase pooledDatabase;
+  private final DatabaseOperations databaseOperations;
   private final BlockingQueue<PreparedDatabase> queue;
 
   public DatabaseCreatorRunnable(
+      DatabaseOperations databaseOperations,
       BlockingQueue<PreparedDatabase> queue,
       Set<PreparedDatabase> createdDatabases,
       PooledDatabase pooledDatabase,
       ConnectionProvider connectionProvider
   ) {
     super(connectionProvider);
+    this.databaseOperations = databaseOperations;
     this.queue = queue;
     this.createdDatabases = createdDatabases;
     this.pooledDatabase = pooledDatabase;
@@ -46,13 +46,17 @@ class DatabaseCreatorRunnable extends ConnectionRunnable {
         connectionProvider
     );
 
-    try (Statement statement = connection.createStatement()) {
-      log.debug("Creating {} template {}", newDatabase.getName(),
+    try {
+      log.debug("Creating {} from template {}", newDatabase.getName(),
           pooledDatabase.getTemplateDatabaseName());
 
-      createDatabase(newDatabase, statement);
+      databaseOperations.createDatabaseFromTemplate(
+          connection,
+          newDatabase.getName(),
+          pooledDatabase.getTemplateDatabaseName()
+      );
 
-      if(pooledDatabase.getListeners() != null) {
+      if (pooledDatabase.getListeners() != null) {
         for (PreparedDatabaseLifecycleListener listener : pooledDatabase.getListeners()) {
           listener.afterCreate(newDatabase);
         }
@@ -62,15 +66,6 @@ class DatabaseCreatorRunnable extends ConnectionRunnable {
     } finally {
       createdDatabases.add(newDatabase);
     }
-  }
-
-  private void createDatabase(PreparedDatabase newDatabase, Statement statement)
-      throws SQLException {
-    statement.execute(String.format(
-        "CREATE DATABASE \"%s\" TEMPLATE \"%s\"",
-        newDatabase.getName(),
-        pooledDatabase.getTemplateDatabaseName()
-    ));
   }
 
   private String getNextPreparedDatabaseName() throws NoSuchAlgorithmException {

@@ -6,10 +6,7 @@ import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.sql.Connection;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.sql.Statement;
 import java.util.List;
 import java.util.concurrent.ThreadLocalRandom;
 import lombok.RequiredArgsConstructor;
@@ -21,22 +18,19 @@ class DatabaseTemplateInitializeRunnable {
 
   private final byte[] buf = new byte[20];
 
+  private final DatabaseOperations databaseOperations;
   private final ConnectionProvider connectionProvider;
   private final PooledDatabase pooledDatabase;
 
   public void run() throws SQLException, InterruptedException {
     try (Connection controlConnection = connectionProvider.getConnection("postgres")) {
       // check if database already exists
-      try (PreparedStatement stmt = controlConnection.prepareStatement(
-          "SELECT datname FROM pg_catalog.pg_database WHERE datname = ?")) {
-        stmt.setString(1, pooledDatabase.getTemplateDatabaseName());
-        ResultSet rs = stmt.executeQuery();
-        if (rs.next()) {
-          // The template database has already been created
-          log.debug("Template database {} already present",
-              pooledDatabase.getTemplateDatabaseName());
-          return;
-        }
+      if (databaseOperations.databaseExists(controlConnection,
+          pooledDatabase.getTemplateDatabaseName())) {
+        // The template database has already been created
+        log.debug("Template database {} already present",
+            pooledDatabase.getTemplateDatabaseName());
+        return;
       }
 
       // create a temporary database to try to initialize with a random name
@@ -55,9 +49,7 @@ class DatabaseTemplateInitializeRunnable {
       String hash = Hex.toHexString(sha1.digest()).substring(0, 20);
       String workName = WIP_PREFIX + pooledDatabase.getName() + "_" + hash;
 
-      try (Statement statement = controlConnection.createStatement()) {
-        statement.execute("CREATE DATABASE \"" + workName + "\"");
-      }
+      databaseOperations.createDatabase(controlConnection, workName);
 
       // initialize the temporary database
       List<DatabaseInitializer> initializers = pooledDatabase.getInitializers();
@@ -70,15 +62,12 @@ class DatabaseTemplateInitializeRunnable {
       }
 
       // and rename it to its proper name
-      try (Statement statement = controlConnection.createStatement()) {
-        statement.execute(String.format(
-            "ALTER DATABASE \"%s\" RENAME TO \"%s\"",
-            workName,
-            pooledDatabase.getTemplateDatabaseName()
-        ));
-      } catch (SQLException e) {
-        log.warn("Failed renaming, other process may have created template database already", e);
-      }
+      databaseOperations.renameDatabase(controlConnection, workName,
+          pooledDatabase.getTemplateDatabaseName());
+
+      // and prevent any connections
+      databaseOperations.disableConnections(controlConnection,
+          pooledDatabase.getTemplateDatabaseName());
     }
   }
 }

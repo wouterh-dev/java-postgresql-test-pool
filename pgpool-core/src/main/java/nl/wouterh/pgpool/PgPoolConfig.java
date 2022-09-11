@@ -54,4 +54,7 @@ public class PgPoolConfig {
    * {@link PgPoolManager} is stopped.
    */
   private final ExecutorService executor;
+
+  @Builder.Default
+  private final DatabaseOperations databaseOperations = new PostgresOperations();
 }

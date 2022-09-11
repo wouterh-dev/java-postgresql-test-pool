@@ -3,7 +3,7 @@ package nl.wouterh.pgpool;
 import lombok.RequiredArgsConstructor;
 
 @RequiredArgsConstructor
-class ThreadWithRunnable {
+class Task {
 
   private final Thread thread;
   private final StoppableRunnable runnable;
