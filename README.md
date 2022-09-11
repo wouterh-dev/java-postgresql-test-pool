@@ -23,6 +23,38 @@ created databases.
 
 ## How to use
 
+Available on [jitpack.io](https://jitpack.io/#wouterh-dev/java-postgresql-test-pool):
+
+```xml
+<dependencies>
+  <dependency>
+    <groupId>com.github.wouterh-dev.java-postgresql-test-pool</groupId>
+    <artifactId>pgpool-junit5</artifactId>
+    <version>master-SNAPSHOT</version> <!-- Change to release tag! -->
+    <scope>test</scope>
+  </dependency>
+  <dependency>
+    <groupId>com.github.wouterh-dev.java-postgresql-test-pool</groupId>
+    <artifactId>pgpool-hikari</artifactId>
+    <version>master-SNAPSHOT</version> <!-- Change to release tag! -->
+    <scope>test</scope>
+  </dependency>
+  <dependency>
+    <groupId>com.github.wouterh-dev.java-postgresql-test-pool</groupId>
+    <artifactId>pgpool-testcontainers</artifactId>
+    <version>master-SNAPSHOT</version> <!-- Change to release tag! -->
+    <scope>test</scope>
+  </dependency>
+</dependencies>
+
+<repositories>
+  <repository>
+    <id>jitpack.io</id>
+    <url>https://jitpack.io</url>
+  </repository>
+</repositories>
+```
+
 Instantiate a [PgPoolManager] and call `beforeEach` before each test, and `afterEach` after
 each test.
 Then during the test, use `getPreparedDatabase(name).getConnection()` to get connections. For a full
