@@ -3,7 +3,7 @@
   xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
   <modelVersion>4.0.0</modelVersion>
 
-  <groupId>nl.wouterh.pgpool</groupId>
+  <groupId>com.github.wouterh-dev.java-postgresql-test-pool</groupId>
   <artifactId>pgpool-parent</artifactId>
   <version>1.0-SNAPSHOT</version>
   <packaging>pom</packaging>
@@ -43,42 +43,42 @@
   <dependencyManagement>
     <dependencies>
       <dependency>
-        <groupId>nl.wouterh.pgpool</groupId>
+        <groupId>com.github.wouterh-dev.java-postgresql-test-pool</groupId>
         <artifactId>pgpool-core</artifactId>
         <version>${project.version}</version>
       </dependency>
       <dependency>
-        <groupId>nl.wouterh.pgpool</groupId>
+        <groupId>com.github.wouterh-dev.java-postgresql-test-pool</groupId>
         <artifactId>pgpool-testcontainers</artifactId>
         <version>${project.version}</version>
       </dependency>
       <dependency>
-        <groupId>nl.wouterh.pgpool</groupId>
+        <groupId>com.github.wouterh-dev.java-postgresql-test-pool</groupId>
         <artifactId>pgpool-common-example</artifactId>
         <version>${project.version}</version>
       </dependency>
       <dependency>
-        <groupId>nl.wouterh.pgpool</groupId>
+        <groupId>com.github.wouterh-dev.java-postgresql-test-pool</groupId>
         <artifactId>pgpool-junit4</artifactId>
         <version>${project.version}</version>
       </dependency>
       <dependency>
-        <groupId>nl.wouterh.pgpool</groupId>
+        <groupId>com.github.wouterh-dev.java-postgresql-test-pool</groupId>
         <artifactId>pgpool-junit5</artifactId>
         <version>${project.version}</version>
       </dependency>
       <dependency>
-        <groupId>nl.wouterh.pgpool</groupId>
+        <groupId>com.github.wouterh-dev.java-postgresql-test-pool</groupId>
         <artifactId>pgpool-liquibase</artifactId>
         <version>${project.version}</version>
       </dependency>
       <dependency>
-        <groupId>nl.wouterh.pgpool</groupId>
+        <groupId>com.github.wouterh-dev.java-postgresql-test-pool</groupId>
         <artifactId>pgpool-spring-boot</artifactId>
         <version>${project.version}</version>
       </dependency>
       <dependency>
-        <groupId>nl.wouterh.pgpool</groupId>
+        <groupId>com.github.wouterh-dev.java-postgresql-test-pool</groupId>
         <artifactId>pgpool-hikari</artifactId>
         <version>${project.version}</version>
       </dependency>

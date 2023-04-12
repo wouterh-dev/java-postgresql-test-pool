@@ -3,7 +3,7 @@
   <modelVersion>4.0.0</modelVersion>
 
   <parent>
-    <groupId>nl.wouterh.pgpool</groupId>
+    <groupId>com.github.wouterh-dev.java-postgresql-test-pool</groupId>
     <artifactId>pgpool-parent</artifactId>
     <version>1.0-SNAPSHOT</version>
   </parent>
@@ -22,7 +22,7 @@
       <artifactId>junit</artifactId>
     </dependency>
     <dependency>
-      <groupId>nl.wouterh.pgpool</groupId>
+      <groupId>com.github.wouterh-dev.java-postgresql-test-pool</groupId>
       <artifactId>pgpool-core</artifactId>
     </dependency>
     <dependency>

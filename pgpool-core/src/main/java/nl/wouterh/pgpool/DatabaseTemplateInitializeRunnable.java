@@ -54,11 +54,10 @@ class DatabaseTemplateInitializeRunnable {
       // initialize the temporary database
       List<DatabaseInitializer> initializers = pooledDatabase.getInitializers();
       if (initializers != null) {
-        try (Connection workConnection = connectionProvider.getConnection(workName)) {
-          for (DatabaseInitializer initializer : initializers) {
-            initializer.run(workConnection);
-          }
+        for (DatabaseInitializer initializer : initializers) {
+          initializer.run(connectionProvider, workName);
         }
+
       }
 
       // and rename it to its proper name

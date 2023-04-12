@@ -15,4 +15,10 @@ public interface DatabaseInitializer {
 
   void run(Connection connection) throws SQLException;
 
+  default void run(ConnectionProvider connectionProvider, String templateName) throws SQLException {
+    try (Connection conn = connectionProvider.getConnection(templateName)) {
+      run(conn);
+    }
+  }
+
 }

@@ -4,7 +4,7 @@
   <modelVersion>4.0.0</modelVersion>
 
   <parent>
-    <groupId>nl.wouterh.pgpool</groupId>
+    <groupId>com.github.wouterh-dev.java-postgresql-test-pool</groupId>
     <artifactId>pgpool-parent</artifactId>
     <version>1.0-SNAPSHOT</version>
   </parent>
@@ -40,27 +40,27 @@
       <scope>test</scope>
     </dependency>
     <dependency>
-      <groupId>nl.wouterh.pgpool</groupId>
+      <groupId>com.github.wouterh-dev.java-postgresql-test-pool</groupId>
       <artifactId>pgpool-spring-boot</artifactId>
       <scope>test</scope>
     </dependency>
     <dependency>
-      <groupId>nl.wouterh.pgpool</groupId>
+      <groupId>com.github.wouterh-dev.java-postgresql-test-pool</groupId>
       <artifactId>pgpool-hikari</artifactId>
       <scope>test</scope>
     </dependency>
     <dependency>
-      <groupId>nl.wouterh.pgpool</groupId>
+      <groupId>com.github.wouterh-dev.java-postgresql-test-pool</groupId>
       <artifactId>pgpool-liquibase</artifactId>
       <scope>test</scope>
     </dependency>
     <dependency>
-      <groupId>nl.wouterh.pgpool</groupId>
+      <groupId>com.github.wouterh-dev.java-postgresql-test-pool</groupId>
       <artifactId>pgpool-common-example</artifactId>
       <scope>test</scope>
     </dependency>
     <dependency>
-      <groupId>nl.wouterh.pgpool</groupId>
+      <groupId>com.github.wouterh-dev.java-postgresql-test-pool</groupId>
       <artifactId>pgpool-testcontainers</artifactId>
       <scope>test</scope>
     </dependency>
