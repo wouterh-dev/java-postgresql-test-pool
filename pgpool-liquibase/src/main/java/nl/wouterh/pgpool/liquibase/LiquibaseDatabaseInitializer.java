@@ -7,11 +7,15 @@ import java.security.NoSuchAlgorithmException;
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 import liquibase.Contexts;
 import liquibase.LabelExpression;
 import liquibase.Liquibase;
+import liquibase.Scope;
+import liquibase.ThreadLocalScopeManager;
 import liquibase.changelog.ChangeSet;
 import liquibase.database.Database;
 import liquibase.database.DatabaseFactory;
@@ -28,16 +32,16 @@ import org.slf4j.LoggerFactory;
  */
 public class LiquibaseDatabaseInitializer implements DatabaseInitializer {
 
-  /**
-   * Liquibase has race conditions during changelog parsing:
-   * <a href="https://github.com/liquibase/liquibase/issues/2966">LIQUIBASE-2966</a>.
-   */
-  private static final Object liquibaseRaceConditionLock = new Object();
   private static final Logger log = LoggerFactory.getLogger(LiquibaseDatabaseInitializer.class);
 
-  private final String changeLogFile;
-  private final ResourceAccessor resourceAccessor;
-  private final String liquibaseContexts;
+  protected final String changeLogFile;
+  protected final ResourceAccessor resourceAccessor;
+  protected final String liquibaseContexts;
+
+  static {
+    // Makes liquibase thread-safe
+    Scope.setScopeManager(new ThreadLocalScopeManager());
+  }
 
   public LiquibaseDatabaseInitializer(String changeLogFile) {
     this(changeLogFile, "");
@@ -63,15 +67,13 @@ public class LiquibaseDatabaseInitializer implements DatabaseInitializer {
           .filter((e) -> !e.isEmpty())
           .toArray(String[]::new));
 
-      synchronized (liquibaseRaceConditionLock) {
-        log.info("Starting database migration with contexts {}",
-            contexts.getContexts().stream().sorted().collect(Collectors.joining(", ")));
-        Database database = DatabaseFactory.getInstance()
-            .findCorrectDatabaseImplementation(new JdbcConnection(conn));
+      log.info("Starting database migration with contexts {}",
+          contexts.getContexts().stream().sorted().collect(Collectors.joining(", ")));
+      Database database = DatabaseFactory.getInstance()
+          .findCorrectDatabaseImplementation(new JdbcConnection(conn));
 
-        Liquibase liquibase = new Liquibase(changeLogFile, resourceAccessor, database);
-        liquibase.update(contexts, new LabelExpression());
-      }
+      Liquibase liquibase = new Liquibase(changeLogFile, resourceAccessor, database);
+      liquibase.update(contexts, new LabelExpression());
 
       conn.commit();
       log.info("Finished migration");
@@ -96,20 +98,20 @@ public class LiquibaseDatabaseInitializer implements DatabaseInitializer {
         crypt.update(("extra=" + extra).getBytes(StandardCharsets.UTF_8));
       }
 
-      List<ChangeSet> changeSets;
-      synchronized (liquibaseRaceConditionLock) {
-        Liquibase liquibase = new Liquibase(changeLogFile, resourceAccessor, (Database) null);
-        changeSets = liquibase.getDatabaseChangeLog().getChangeSets();
-      }
+      Liquibase liquibase = new Liquibase(changeLogFile, resourceAccessor, (Database) null);
+      runInScope(liquibase, () -> {
+        List<ChangeSet> changeSets = liquibase.getDatabaseChangeLog().getChangeSets();
 
-      crypt.update(("count=" + changeSets.size()).getBytes(StandardCharsets.UTF_8));
+        crypt.update(("count=" + changeSets.size()).getBytes(StandardCharsets.UTF_8));
 
-      for (ChangeSet changeSet : changeSets) {
-        crypt.update(("author=" + changeSet.getAuthor()).getBytes(StandardCharsets.UTF_8));
-        crypt.update(("id=" + changeSet.getId()).getBytes(StandardCharsets.UTF_8));
-        crypt.update(("file=" + changeSet.getFilePath()).getBytes(StandardCharsets.UTF_8));
-        crypt.update(("checksum=" + changeSet.generateCheckSum()).getBytes(StandardCharsets.UTF_8));
-      }
+        for (ChangeSet changeSet : changeSets) {
+          crypt.update(("author=" + changeSet.getAuthor()).getBytes(StandardCharsets.UTF_8));
+          crypt.update(("id=" + changeSet.getId()).getBytes(StandardCharsets.UTF_8));
+          crypt.update(("file=" + changeSet.getFilePath()).getBytes(StandardCharsets.UTF_8));
+          crypt.update(
+              ("checksum=" + changeSet.generateCheckSum()).getBytes(StandardCharsets.UTF_8));
+        }
+      });
 
       return crypt.digest();
     } catch (LiquibaseException e) {
@@ -121,5 +123,27 @@ public class LiquibaseDatabaseInitializer implements DatabaseInitializer {
 
   protected String getExtraVersion() {
     return null;
+  }
+
+  /**
+   * Certain public liquibase methods expect to be called from a scope, but they aren't actually
+   * scoped, and initiating a scope is done in a private method so this method is a copy of the
+   * implementation.
+   */
+  private static void runInScope(Liquibase liquibase, Scope.ScopedRunner scopedRunner)
+      throws LiquibaseException {
+    Map<String, Object> scopeObjects = new HashMap<>();
+    scopeObjects.put(Scope.Attr.database.name(), liquibase.getDatabase());
+    scopeObjects.put(Scope.Attr.resourceAccessor.name(), liquibase.getResourceAccessor());
+
+    try {
+      Scope.child(scopeObjects, scopedRunner);
+    } catch (Exception e) {
+      if (e instanceof LiquibaseException) {
+        throw (LiquibaseException) e;
+      } else {
+        throw new LiquibaseException(e);
+      }
+    }
   }
 }
